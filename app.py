@@ -392,7 +392,14 @@ def concurrency_page():
     state = concurrency.get_concurrency_state()
     test_book = models.get_book_by_id("B100")
     test_copies = models.get_copies_for_book("B100") if test_book else []
-    return render_template('concurrency.html', initial_state=state, test_book=test_book, test_copies=test_copies)
+    all_books = models.get_all_books()
+    return render_template(
+        'concurrency.html',
+        initial_state=state,
+        test_book=test_book,
+        test_copies=test_copies,
+        all_books=all_books
+    )
 
 @app.route('/concurrency-test', methods=['POST'])
 def run_concurrency_test_endpoint():
@@ -438,4 +445,5 @@ if __name__ == '__main__':
     print("Starting Flask threaded development server on http://127.0.0.1:5000 ...")
     print("=" * 70)
     # Using threaded=True on a single process as required by the specification (Page 4 & 5)
-    app.run(host='127.0.0.1', port=5000, debug=True, threaded=True)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)
+

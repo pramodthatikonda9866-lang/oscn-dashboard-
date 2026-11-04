@@ -352,3 +352,4 @@ def cancel_reservation(reservation_id: int, student_id: int = None):
             conn.rollback()
             conn.close()
             return {"success": False, "message": f"Error cancelling reservation: {str(e)}"}
+

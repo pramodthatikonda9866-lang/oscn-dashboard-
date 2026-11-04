@@ -128,3 +128,4 @@ def admin_required(f):
             return redirect(url_for('login_page'))
         return f(*args, **kwargs)
     return decorated_function
+

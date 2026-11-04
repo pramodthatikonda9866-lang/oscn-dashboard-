@@ -267,3 +267,4 @@ def reset_concurrency_test_book(initial_copies=1):
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully at:", DB_PATH)
+

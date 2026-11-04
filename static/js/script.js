@@ -164,6 +164,9 @@ function initConcurrencyMonitor() {
     const threadsInput = document.getElementById('testThreadsInput');
     const copiesInput = document.getElementById('testCopiesInput');
     const mutexToggle = document.getElementById('testMutexToggle');
+    const bookSelect = document.getElementById('testBookSelect');
+    const currentCopiesDisplay = document.getElementById('currentCopiesDisplay');
+    const threadsBoardGrid = document.getElementById('threadsBoardGrid');
     const terminalBody = document.getElementById('terminalBody');
     const lockIndicator = document.getElementById('lockIndicator');
     const lockLabel = document.getElementById('lockLabel');
@@ -176,6 +179,33 @@ function initConcurrencyMonitor() {
     const statBlocked = document.getElementById('statBlocked');
     const invariantBadge = document.getElementById('invariantBadge');
 
+    // Initialize initial student cards (defaults to 5 students)
+    const initialNumThreads = parseInt(threadsInput ? threadsInput.value : 5) || 5;
+    renderStudentCards(initialNumThreads);
+
+    // Book Select Dropdown Change Listener
+    if (bookSelect) {
+        bookSelect.addEventListener('change', function () {
+            const selectedOpt = this.options[this.selectedIndex];
+            const copies = selectedOpt.getAttribute('data-copies') || 1;
+            if (currentCopiesDisplay) {
+                currentCopiesDisplay.textContent = `${copies} Available`;
+            }
+            if (copiesInput) {
+                copiesInput.value = copies;
+            }
+        });
+    }
+
+    // Number of Students Input Listener
+    if (threadsInput) {
+        threadsInput.addEventListener('change', function () {
+            const count = Math.max(1, Math.min(20, parseInt(this.value) || 5));
+            this.value = count;
+            renderStudentCards(count);
+        });
+    }
+
     // Preset Buttons
     document.querySelectorAll('.preset-pill').forEach(pill => {
         pill.addEventListener('click', function () {
@@ -186,16 +216,50 @@ function initConcurrencyMonitor() {
             const copies = this.getAttribute('data-copies');
             const mutex = this.getAttribute('data-mutex');
 
-            if (threads) threadsInput.value = threads;
-            if (copies) copiesInput.value = copies;
-            if (mutex !== null) mutexToggle.checked = (mutex === 'true');
+            if (threads && threadsInput) {
+                threadsInput.value = threads;
+                renderStudentCards(parseInt(threads));
+            }
+            if (copies && copiesInput) {
+                copiesInput.value = copies;
+                if (currentCopiesDisplay) {
+                    currentCopiesDisplay.textContent = `${copies} Available`;
+                }
+            }
+            if (mutex !== null && mutexToggle) {
+                mutexToggle.checked = (mutex === 'true');
+            }
         });
     });
+
+    // Helper: Dynamically Render Student Thread Cards
+    function renderStudentCards(count) {
+        if (!threadsBoardGrid) return;
+        threadsBoardGrid.innerHTML = '';
+        for (let i = 1; i <= count; i++) {
+            const card = document.createElement('div');
+            card.className = 'student-thread-card state-waiting';
+            card.id = `threadCard-${i}`;
+            card.innerHTML = `
+                <div class="thread-card-header">
+                    <span class="thread-student-title">👤 Student ${i}</span>
+                    <span class="badge badge-status-waiting" id="threadBadge-${i}">WAITING</span>
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary);">
+                    Thread ID: <code>Thread-${i}</code>
+                </div>
+                <div class="thread-step-box" id="threadStep-${i}">
+                    Ready to request book copy...
+                </div>
+            `;
+            threadsBoardGrid.appendChild(card);
+        }
+    }
 
     // Reset Button Handler
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
-            const copies = copiesInput.value || 1;
+            const copies = copiesInput ? copiesInput.value || 1 : 1;
             resetBtn.disabled = true;
             resetBtn.innerHTML = '<span>Resetting...</span>';
 
@@ -207,40 +271,43 @@ function initConcurrencyMonitor() {
                 .then(res => res.json())
                 .then(data => {
                     resetBtn.disabled = false;
-                    resetBtn.innerHTML = '<span>Reset Test Book</span>';
+                    resetBtn.innerHTML = '<span>Reset Simulation</span>';
                     appendTerminalRow({
                         seq: '*',
                         timestamp: new Date().toLocaleTimeString(),
-                        thread_name: 'Coordinator',
+                        thread_name: 'System Coordinator',
                         event_type: 'RESET',
-                        details: `Test book state cleared. Fresh ${copies} copy(ies) created as AVAILABLE.`,
+                        details: `Simulation reset. Fresh ${copies} copy(ies) created as AVAILABLE.`,
                         status_badge: 'UNLOCKED'
                     });
                     updateLockDisplay('UNLOCKED', null);
-                    // Reload page or update copies display if needed
-                    location.reload();
+                    renderStudentCards(parseInt(threadsInput ? threadsInput.value : 5));
+                    if (currentCopiesDisplay) currentCopiesDisplay.textContent = `${copies} Available`;
+                    if (summaryCard) summaryCard.style.display = 'none';
                 })
                 .catch(err => {
                     resetBtn.disabled = false;
-                    resetBtn.innerHTML = '<span>Reset Test Book</span>';
-                    alert('Error resetting test book: ' + err);
+                    resetBtn.innerHTML = '<span>Reset Simulation</span>';
+                    alert('Error resetting simulation: ' + err);
                 });
         });
     }
 
-    // Run Test Button Handler
+    // Start Simulation Button Handler
     if (runBtn) {
         runBtn.addEventListener('click', function () {
-            const numThreads = parseInt(threadsInput.value) || 2;
+            const numThreads = parseInt(threadsInput.value) || 5;
             const initialCopies = parseInt(copiesInput.value) || 1;
             const useMutex = mutexToggle.checked;
+            const selectedBook = bookSelect ? bookSelect.value : 'B100';
 
             runBtn.disabled = true;
             runBtn.innerHTML = '<span class="spinner"></span> <span>Running Threads...</span>';
             terminalBody.innerHTML = '';
-            summaryCard.style.display = 'none';
+            if (summaryCard) summaryCard.style.display = 'none';
 
-            // Show active lock status
+            // Reset cards to waiting state
+            renderStudentCards(numThreads);
             updateLockDisplay('UNLOCKED', null);
 
             fetch('/concurrency-test', {
@@ -250,13 +317,13 @@ function initConcurrencyMonitor() {
                     num_threads: numThreads,
                     initial_copies: initialCopies,
                     use_mutex: useMutex,
-                    book_id: 'B100'
+                    book_id: selectedBook
                 })
             })
                 .then(res => res.json())
                 .then(response => {
                     runBtn.disabled = false;
-                    runBtn.innerHTML = '<span>Run Concurrency Test</span>';
+                    runBtn.innerHTML = '<span>Start Simulation (Run Threads)</span>';
 
                     if (response.success && response.data) {
                         displaySimulationResults(response.data);
@@ -266,7 +333,7 @@ function initConcurrencyMonitor() {
                 })
                 .catch(err => {
                     runBtn.disabled = false;
-                    runBtn.innerHTML = '<span>Run Concurrency Test</span>';
+                    runBtn.innerHTML = '<span>Start Simulation (Run Threads)</span>';
                     alert("Error executing concurrency test: " + err);
                 });
         });
@@ -276,45 +343,111 @@ function initConcurrencyMonitor() {
         const events = data.events || [];
         const status = data.status || {};
 
-        // Play events in terminal with slight stagger for natural visual comprehension
+        // Play events with smooth stagger to visually see thread transitions
         let delay = 0;
         events.forEach((evt, idx) => {
             setTimeout(() => {
                 appendTerminalRow(evt);
+
+                // Update individual student thread visual card
+                const threadId = evt.thread_id;
+                if (threadId > 0) {
+                    updateStudentCard(threadId, evt);
+                }
+
                 // Update lock visual dynamically based on event
-                if (evt.event_type === 'LOCK_ACQUIRED' || evt.event_type === 'ENTERED_CRITICAL_SECTION') {
+                if (evt.event_type === 'MUTEX_ACQUIRED' || evt.event_type === 'ENTERED_CRITICAL_SECTION' || evt.event_type === 'LOCK_ACQUIRED') {
                     updateLockDisplay('LOCKED', evt.thread_name);
-                } else if (evt.event_type === 'LOCK_RELEASED') {
+                } else if (evt.event_type === 'MUTEX_RELEASED' || evt.event_type === 'LOCK_RELEASED') {
                     updateLockDisplay('UNLOCKED', null);
                 }
             }, delay);
-            delay += 25; // Smooth stagger
+            delay += 45; // Smooth stagger
         });
 
         // After all events animated, reveal the final summary card
         setTimeout(() => {
             updateLockDisplay('UNLOCKED', null);
-            summaryCard.style.display = 'block';
-            summaryText.textContent = status.summary_message;
+            if (summaryCard) summaryCard.style.display = 'block';
+            if (summaryText) summaryText.textContent = status.summary_message;
 
-            statThreads.textContent = status.total_threads;
-            statInitialCopies.textContent = status.initial_copies;
-            statSuccess.textContent = status.successful_issues;
-            statBlocked.textContent = status.failed_requests;
+            if (statThreads) statThreads.textContent = status.total_threads;
+            if (statInitialCopies) statInitialCopies.textContent = status.initial_copies;
+            if (statSuccess) statSuccess.textContent = status.successful_issues;
+            if (statBlocked) statBlocked.textContent = status.failed_requests;
 
             if (status.mutex_enabled) {
                 if (status.invariants_passed) {
-                    invariantBadge.className = 'badge badge-available';
-                    invariantBadge.textContent = 'PASSED (NO RACE CONDITION)';
+                    invariantBadge.className = 'badge badge-status-completed';
+                    invariantBadge.textContent = 'PASSED (MUTUAL EXCLUSION ENFORCED)';
                 } else {
-                    invariantBadge.className = 'badge badge-cancelled';
+                    invariantBadge.className = 'badge badge-status-failed';
                     invariantBadge.textContent = 'FAILED';
                 }
             } else {
-                invariantBadge.className = 'badge badge-locked';
-                invariantBadge.textContent = 'RACE CONDITION TRIGGERED';
+                invariantBadge.className = 'badge badge-status-locked';
+                invariantBadge.textContent = 'RACE CONDITION DEMONSTRATED';
             }
-        }, delay + 50);
+
+            // Update remaining copies display
+            if (currentCopiesDisplay) {
+                const remaining = Math.max(0, status.initial_copies - status.successful_issues);
+                currentCopiesDisplay.textContent = `${remaining} Available`;
+            }
+        }, delay + 60);
+    }
+
+    function updateStudentCard(threadId, evt) {
+        const card = document.getElementById(`threadCard-${threadId}`);
+        const badge = document.getElementById(`threadBadge-${threadId}`);
+        const step = document.getElementById(`threadStep-${threadId}`);
+
+        if (!card || !badge || !step) return;
+
+        const eventType = evt.event_type;
+
+        if (eventType === 'THREAD_CREATED') {
+            badge.className = 'badge badge-status-waiting';
+            badge.textContent = 'WAITING';
+            step.textContent = 'Thread Initialized';
+        } else if (eventType === 'THREAD_STARTED') {
+            card.className = 'student-thread-card state-running';
+            badge.className = 'badge badge-status-running';
+            badge.textContent = 'RUNNING';
+            step.textContent = 'Thread Started. Arrived at Barrier.';
+        } else if (eventType === 'WAITING_FOR_MUTEX' || eventType === 'WAITING_FOR_LOCK') {
+            card.className = 'student-thread-card state-waiting';
+            badge.className = 'badge badge-status-waiting';
+            badge.textContent = 'WAITING';
+            step.textContent = 'Waiting for Mutex Lock...';
+        } else if (eventType === 'MUTEX_ACQUIRED' || eventType === 'LOCK_ACQUIRED' || eventType === 'ENTERED_CRITICAL_SECTION') {
+            card.className = 'student-thread-card state-locked';
+            badge.className = 'badge badge-status-locked';
+            badge.textContent = 'LOCKED';
+            step.textContent = 'Mutex Acquired! In Critical Section.';
+        } else if (eventType === 'CHECKING_AVAILABILITY') {
+            step.textContent = 'Checking copy availability in SQLite...';
+        } else if (eventType === 'BOOK_ISSUED' || eventType === 'ISSUE_SUCCESS') {
+            card.className = 'student-thread-card state-completed';
+            badge.className = 'badge badge-status-completed';
+            badge.textContent = 'COMPLETED';
+            step.textContent = evt.details || 'Book Issued Successfully!';
+        } else if (eventType.includes('RACE')) {
+            card.className = 'student-thread-card state-locked';
+            badge.className = 'badge badge-status-locked';
+            badge.textContent = 'RACE COLLISION';
+            step.textContent = evt.details || 'Unsafe concurrent assignment!';
+        } else if (eventType === 'BOOK_UNAVAILABLE' || eventType === 'NO_COPY_AVAILABLE') {
+            card.className = 'student-thread-card state-failed';
+            badge.className = 'badge badge-status-failed';
+            badge.textContent = 'FAILED';
+            step.textContent = 'Book Unavailable (0 copies left)';
+        } else if (eventType === 'THREAD_COMPLETED') {
+            // Keep completed or failed status
+            if (!badge.textContent.includes('COMPLETED') && !badge.textContent.includes('FAILED')) {
+                step.textContent = 'Thread execution finished.';
+            }
+        }
     }
 
     function appendTerminalRow(evt) {
@@ -324,10 +457,10 @@ function initConcurrencyMonitor() {
         let badgeClass = 'badge-available';
         if (evt.status_badge === 'WAITING') badgeClass = 'badge-waiting';
         else if (evt.status_badge === 'LOCKED' || evt.status_badge === 'DANGER') badgeClass = 'badge-locked';
-        else if (evt.status_badge === 'CRITICAL') badgeClass = 'badge-critical';
-        else if (evt.status_badge === 'UNAVAILABLE' || evt.status_badge === 'ERROR') badgeClass = 'badge-cancelled';
+        else if (evt.status_badge === 'CRITICAL' || evt.status_badge === 'RUNNING') badgeClass = 'badge-critical';
+        else if (evt.status_badge === 'UNAVAILABLE' || evt.status_badge === 'ERROR' || evt.status_badge === 'FAILED') badgeClass = 'badge-cancelled';
         else if (evt.status_badge === 'UNLOCKED') badgeClass = 'badge-unlocked';
-        else if (evt.status_badge === 'ISSUED') badgeClass = 'badge-ready';
+        else if (evt.status_badge === 'ISSUED' || evt.status_badge === 'COMPLETED') badgeClass = 'badge-ready';
 
         row.innerHTML = `
             <span class="log-seq">#${evt.seq}</span>
@@ -349,7 +482,7 @@ function initConcurrencyMonitor() {
             lockIndicator.innerHTML = '🔒';
             lockLabel.className = 'lock-state-label locked';
             lockLabel.textContent = 'LOCKED';
-            if (lockSubtext) lockSubtext.textContent = `Held by ${holder || 'Active Thread'}`;
+            if (lockSubtext) lockSubtext.textContent = `Held by ${holder || 'Active Student Thread'}`;
         } else {
             lockIndicator.className = 'lock-status-indicator unlocked';
             lockIndicator.innerHTML = '🔓';
@@ -359,3 +492,4 @@ function initConcurrencyMonitor() {
         }
     }
 }
+

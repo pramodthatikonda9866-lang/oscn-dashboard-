@@ -168,3 +168,4 @@ if __name__ == '__main__':
     print("RUNNING OSCN PROJECT 04 CONCURRENCY & FUNCTIONAL VERIFICATION SUITE")
     print("=" * 70)
     unittest.main(verbosity=2)
+

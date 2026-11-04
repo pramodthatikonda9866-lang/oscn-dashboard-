@@ -167,3 +167,4 @@ When Mutex is disabled, competing threads both read the same copy as `AVAILABLE`
 
 ## 📖 Faculty Evaluation Guide
 Refer to **`FACULTY_EVALUATION.md`** for answers to all 13 standard viva questions and the step-by-step demonstration walkthrough sequence.
+

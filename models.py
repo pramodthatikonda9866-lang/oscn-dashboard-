@@ -298,3 +298,4 @@ def get_library_stats():
         "total_students": total_students,
         "recent_transactions": recent_transactions
     }
+
