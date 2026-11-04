@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Books - OSCN Library System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>📚 Library Catalogue</span>
+        </h1>
+        <p class="page-subtitle">Browse books, verify live copy availability, and issue or reserve copies.</p>
+    </div>
+</div>
+
+<!-- SEARCH & FILTER BAR -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-body" style="padding: 1rem 1.25rem;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 2; min-width: 260px;">
+                <input type="text" id="bookSearchInput" class="form-control" placeholder="Search by title, author, book ID, or category..." value="{{ search_query }}">
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+                <select id="categoryFilter" class="form-control">
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>
+                            Category: {{ cat }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BOOKS GRID -->
+<div class="books-grid" id="booksGridContainer">
+    {% for book in books %}
+        <div class="book-card">
+            <div class="book-card-top {% if book.book_id == 'B100' %}demo-book-banner{% endif %}">
+                <span class="book-category-tag">{{ book.category }}</span>
+                <span class="book-id-badge">{{ book.book_id }}</span>
+            </div>
+            <div class="book-card-body">
+                <h3 class="book-title">{{ book.title }}</h3>
+                <p class="book-author">by {{ book.author }}</p>
+                <p class="book-description">{{ book.description or 'Standard library reference textbook.' }}</p>
+
+                <div class="book-availability-bar">
+                    <div class="copies-stat">
+                        <span>Available: <strong>{{ book.available_copies or 0 }}</strong> / {{ book.total_copies or 0 }}</span>
+                    </div>
+                    <span class="badge {% if (book.available_copies or 0) > 0 %}badge-available{% else %}badge-issued{% endif %}">
+                        {% if (book.available_copies or 0) > 0 %}AVAILABLE{% else %}ALL ISSUED{% endif %}
+                    </span>
+                </div>
+
+                <div class="book-card-actions">
+                    {% if (book.available_copies or 0) > 0 %}
+                        <form action="{{ url_for('issue_action') }}" method="POST" style="flex: 1;">
+                            <input type="hidden" name="book_id" value="{{ book.book_id }}">
+                            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">
+                                Issue Copy
+                            </button>
+                        </form>
+                    {% else %}
+                        <form action="{{ url_for('reserve_action') }}" method="POST" style="flex: 1;">
+                            <input type="hidden" name="book_id" value="{{ book.book_id }}">
+                            <button type="submit" class="btn btn-teal btn-sm" style="width: 100%;">
+                                Reserve ({{ book.waiting_reservations or 0 }} in queue)
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

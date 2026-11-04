@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}My Book Loans - OSCN Library System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>📖 My Borrowed Books</span>
+        </h1>
+        <p class="page-subtitle">Track your currently issued physical copies and view previous loan transactions.</p>
+    </div>
+    <a href="{{ url_for('books_catalogue') }}" class="btn btn-primary">Browse Catalogue</a>
+</div>
+
+<!-- CURRENT ACTIVE LOANS -->
+<div class="card">
+    <div class="card-header">
+        <h3>Active Loans ({{ active_loans | length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if active_loans %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Book Title & Category</th>
+                            <th>Physical Copy ID</th>
+                            <th>Issue Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in active_loans %}
+                        <tr>
+                            <td>
+                                <strong>{{ loan.title }}</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">by {{ loan.author }} • <span class="badge badge-completed">{{ loan.category }}</span></span>
+                            </td>
+                            <td><code>{{ loan.copy_id }}</code></td>
+                            <td>{{ loan.issue_date }}</td>
+                            <td><strong style="color: #B45309;">{{ loan.due_date[:10] }}</strong></td>
+                            <td><span class="badge badge-ready">ACTIVE LOAN</span></td>
+                            <td>
+                                <form action="{{ url_for('return_action') }}" method="POST">
+                                    <input type="hidden" name="copy_id" value="{{ loan.copy_id }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Confirm return of copy {{ loan.copy_id }}?')">
+                                        Return Book
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                <p style="font-size: 1.15rem; font-weight: 600;">No active loans at this time.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.3rem;">When you issue a book from the catalogue, it will be listed here with its physical copy ID.</p>
+                <a href="{{ url_for('books_catalogue') }}" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Browse Books Now</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- LOAN HISTORY -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3>Loan History ({{ history | length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if history %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tx ID</th>
+                            <th>Book Title</th>
+                            <th>Copy ID</th>
+                            <th>Issued On</th>
+                            <th>Returned On</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in history %}
+                        <tr>
+                            <td>#{{ tx.transaction_id }}</td>
+                            <td><strong>{{ tx.title }}</strong></td>
+                            <td><code>{{ tx.copy_id }}</code></td>
+                            <td>{{ tx.issue_date[:10] }}</td>
+                            <td>{{ tx.return_date[:10] if tx.return_date else '—' }}</td>
+                            <td>
+                                <span class="badge {% if tx.status == 'ACTIVE' %}badge-ready{% else %}badge-completed{% endif %}">
+                                    {{ tx.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+                No historical records found.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

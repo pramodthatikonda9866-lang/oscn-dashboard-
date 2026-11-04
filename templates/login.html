@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - OSCN Library Management System{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span style="font-size: 2.2rem;">🏛️</span>
+            <h2>University Library System</h2>
+            <p>OSCN Project 04 • Python Mutex Synchronization</p>
+        </div>
+
+        <div class="auth-body">
+            <!-- ROLE SELECTOR TABS -->
+            <div class="auth-tabs" id="authTabs">
+                <div class="auth-tab active" data-role="student" onclick="selectRole('student')">Student Portal</div>
+                <div class="auth-tab" data-role="admin" onclick="selectRole('admin')">Admin / Librarian</div>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form action="{{ url_for('login_page') }}" method="POST" id="loginForm">
+                <input type="hidden" name="role" id="loginRoleInput" value="student">
+
+                <div class="form-group" id="studentEmailGroup">
+                    <label class="form-label" for="loginEmail">Student University Email</label>
+                    <input type="email" id="loginEmail" name="email" class="form-control" placeholder="john@university.edu">
+                </div>
+
+                <div class="form-group" id="adminUsernameGroup" style="display: none;">
+                    <label class="form-label" for="loginUsername">Admin Username</label>
+                    <input type="text" id="loginUsername" name="username" class="form-control" placeholder="admin">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" class="form-control" required placeholder="••••••••">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.5rem;">
+                    Sign In
+                </button>
+            </form>
+
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+                <span>New student? </span>
+                <a href="{{ url_for('register_page') }}" style="font-weight: 600;">Create an account</a>
+            </div>
+
+            <!-- DEMO CREDENTIALS QUICK-FILL BOX -->
+            <div style="margin-top: 1.5rem; padding: 0.9rem; background: var(--bg-page); border: 1px dashed var(--border-color); border-radius: var(--radius-md); font-size: 0.8rem;">
+                <div style="font-weight: 700; color: var(--primary-navy); margin-bottom: 0.4rem;">Demo Credentials for Faculty Evaluation:</div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fillStudentDemo()">Demo Student</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fillAdminDemo()">Demo Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectRole(role) {
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.getAttribute('data-role') === role);
+    });
+    document.getElementById('loginRoleInput').value = role;
+
+    const emailGroup = document.getElementById('studentEmailGroup');
+    const adminGroup = document.getElementById('adminUsernameGroup');
+    const emailInput = document.getElementById('loginEmail');
+    const userInput = document.getElementById('loginUsername');
+
+    if (role === 'admin') {
+        emailGroup.style.display = 'none';
+        adminGroup.style.display = 'block';
+        emailInput.removeAttribute('required');
+        userInput.setAttribute('required', 'required');
+    } else {
+        emailGroup.style.display = 'block';
+        adminGroup.style.display = 'none';
+        userInput.removeAttribute('required');
+        emailInput.setAttribute('required', 'required');
+    }
+}
+
+function fillStudentDemo() {
+    selectRole('student');
+    document.getElementById('loginEmail').value = 'john@university.edu';
+    document.getElementById('loginPassword').value = 'student123';
+}
+
+function fillAdminDemo() {
+    selectRole('admin');
+    document.getElementById('loginUsername').value = 'admin';
+    document.getElementById('loginPassword').value = 'admin123';
+}
+</script>
+{% endblock %}

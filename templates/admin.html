@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Portal - OSCN Library System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>🛡️ Administrator & Librarian Portal</span>
+        </h1>
+        <p class="page-subtitle">Manage books catalogue, copy-level inventory, student directory, and transaction audits.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <button type="button" class="btn btn-primary" data-modal-target="addBookModal">+ Add New Book</button>
+        <a href="{{ url_for('concurrency_page') }}" class="btn btn-teal">⚡ OS Concurrency Monitor</a>
+    </div>
+</div>
+
+<!-- ADMIN STATS GRID -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon books">📚</div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.total_books }}</div>
+            <div class="stat-label">Book Titles</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon available">📦</div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.total_copies }}</div>
+            <div class="stat-label">Total Physical Copies</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon issued">📖</div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.issued_copies }}</div>
+            <div class="stat-label">Issued Copies</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon reserved">⏳</div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.active_reservations }}</div>
+            <div class="stat-label">Active Reservations</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon students">🎓</div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.total_students }}</div>
+            <div class="stat-label">Enrolled Students</div>
+        </div>
+    </div>
+</div>
+
+<!-- BOOK MANAGEMENT TABLE -->
+<div class="card">
+    <div class="card-header">
+        <h3>Book Inventory & Copy Tracking ({{ books | length }} titles)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Book ID</th>
+                        <th>Title & Author</th>
+                        <th>Category</th>
+                        <th>Total Copies</th>
+                        <th>Available</th>
+                        <th>Issued</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in books %}
+                    <tr>
+                        <td><code>{{ b.book_id }}</code></td>
+                        <td>
+                            <strong>{{ b.title }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ b.author }}</span>
+                        </td>
+                        <td><span class="badge badge-completed">{{ b.category }}</span></td>
+                        <td><strong>{{ b.total_copies }}</strong></td>
+                        <td><span class="badge badge-available">{{ b.available_copies }}</span></td>
+                        <td><span class="badge badge-issued">{{ b.issued_copies }}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <!-- ADD COPY BUTTON -->
+                                <form action="{{ url_for('admin_add_copy') }}" method="POST">
+                                    <input type="hidden" name="book_id" value="{{ b.book_id }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" title="Add another physical copy">+ Copy</button>
+                                </form>
+                                <!-- DELETE BOOK BUTTON -->
+                                <form action="{{ url_for('admin_delete_book') }}" method="POST">
+                                    <input type="hidden" name="book_id" value="{{ b.book_id }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete book {{ b.book_id }}?')">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+    <!-- TRANSACTIONS AUDIT -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Loan Transactions</h3>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tx ID</th>
+                            <th>Student</th>
+                            <th>Copy ID</th>
+                            <th>Issue Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions[:8] %}
+                        <tr>
+                            <td>#{{ tx.transaction_id }}</td>
+                            <td>{{ tx.student_name }}</td>
+                            <td><code>{{ tx.copy_id }}</code></td>
+                            <td>{{ tx.issue_date[:10] }}</td>
+                            <td>
+                                <span class="badge {% if tx.status == 'ACTIVE' %}badge-ready{% else %}badge-completed{% endif %}">
+                                    {{ tx.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESERVATION QUEUES -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Active Reservation Queues</h3>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Res ID</th>
+                            <th>Student</th>
+                            <th>Book Title</th>
+                            <th>Queue #</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if reservations %}
+                            {% for r in reservations[:8] %}
+                            <tr>
+                                <td>#{{ r.reservation_id }}</td>
+                                <td>{{ r.student_name }}</td>
+                                <td>{{ r.book_title[:24] }}...</td>
+                                <td><span class="badge badge-waiting">#{{ r.queue_number }}</span></td>
+                                <td>
+                                    <span class="badge {% if r.status == 'READY' %}badge-ready{% elif r.status == 'WAITING' %}badge-waiting{% else %}badge-completed{% endif %}">
+                                        {{ r.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No active reservations in queue.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STUDENTS DIRECTORY -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3>Enrolled Students Directory ({{ students | length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Full Name</th>
+                        <th>University Email</th>
+                        <th>Registration Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in students %}
+                    <tr>
+                        <td><code>#{{ s.student_id }}</code></td>
+                        <td><strong>{{ s.name }}</strong></td>
+                        <td>{{ s.email }}</td>
+                        <td>{{ s.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ADD BOOK MODAL -->
+<div class="modal-backdrop" id="addBookModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 style="font-size: 1.15rem; font-weight: 700;">Add New Book Title</h3>
+            <button type="button" class="modal-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form action="{{ url_for('admin_add_book') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="addBookId">Book Identifier (e.g., B106)</label>
+                    <input type="text" id="addBookId" name="book_id" class="form-control" required placeholder="B106">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addTitle">Book Title</label>
+                    <input type="text" id="addTitle" name="title" class="form-control" required placeholder="Distributed Systems: Concepts and Design">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addAuthor">Author(s)</label>
+                    <input type="text" id="addAuthor" name="author" class="form-control" required placeholder="George Coulouris, Jean Dollimore">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addCategory">Category</label>
+                    <input type="text" id="addCategory" name="category" class="form-control" required placeholder="Operating Systems">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addCopies">Initial Physical Copies Count</label>
+                    <input type="number" id="addCopies" name="copies" class="form-control" required min="1" max="10" value="2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addDesc">Description (Optional)</label>
+                    <textarea id="addDesc" name="description" class="form-control" rows="2" placeholder="Textbook summary..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Book & Copies</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

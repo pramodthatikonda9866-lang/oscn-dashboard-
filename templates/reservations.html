@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}My Reservations - OSCN Library System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>⏳ Book Reservations</span>
+        </h1>
+        <p class="page-subtitle">Track your position in book waiting queues and claim copies once they become ready.</p>
+    </div>
+    <a href="{{ url_for('books_catalogue') }}" class="btn btn-primary">Browse Catalogue</a>
+</div>
+
+<!-- RESERVATIONS LIST -->
+<div class="card">
+    <div class="card-header">
+        <h3>My Reservation Queue ({{ reservations | length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if reservations %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Reservation Date</th>
+                            <th>Queue Position</th>
+                            <th>Lifecycle Status</th>
+                            <th>Details / Deadline</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in reservations %}
+                        <tr>
+                            <td>
+                                <strong>{{ r.book_title }}</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">by {{ r.book_author }} • Book ID: <code>{{ r.book_id }}</code></span>
+                            </td>
+                            <td>{{ r.reservation_date[:16] }}</td>
+                            <td>
+                                {% if r.status == 'WAITING' %}
+                                    <span class="badge badge-waiting">Queue #{{ r.queue_number }}</span>
+                                {% elif r.status == 'READY' %}
+                                    <span class="badge badge-ready">Allocated!</span>
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if r.status == 'READY' %}badge-ready{% elif r.status == 'WAITING' %}badge-waiting{% elif r.status == 'COMPLETED' %}badge-completed{% else %}badge-cancelled{% endif %}">
+                                    {{ r.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if r.status == 'READY' %}
+                                    <div style="font-size: 0.82rem;">
+                                        <strong>Copy:</strong> <code>{{ r.allocated_copy_id }}</code><br>
+                                        <span style="color: #047857;">Pickup by: {{ r.pickup_deadline[:16] }}</span>
+                                    </div>
+                                {% elif r.status == 'WAITING' %}
+                                    <span style="font-size: 0.82rem; color: var(--text-secondary);">Waiting for a copy to be returned.</span>
+                                {% elif r.status == 'COMPLETED' %}
+                                    <span style="font-size: 0.82rem; color: var(--text-muted);">Fulfilled and issued.</span>
+                                {% else %}
+                                    <span style="font-size: 0.82rem; color: var(--text-muted);">Cancelled.</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.status == 'READY' %}
+                                    <form action="{{ url_for('issue_action') }}" method="POST" style="display: inline-block;">
+                                        <input type="hidden" name="book_id" value="{{ r.book_id }}">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            Claim / Issue Now
+                                        </button>
+                                    </form>
+                                {% elif r.status == 'WAITING' %}
+                                    <form action="{{ url_for('cancel_reservation_action') }}" method="POST" style="display: inline-block;">
+                                        <input type="hidden" name="reservation_id" value="{{ r.reservation_id }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancel this reservation?')">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                <p style="font-size: 1.15rem; font-weight: 600;">No reservations placed yet.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.3rem;">When a book has 0 copies available, you can join the FIFO reservation queue.</p>
+                <a href="{{ url_for('books_catalogue') }}" class="btn btn-primary btn-sm" style="margin-top: 1rem;">View Catalogue</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- POLICY EXPLANATION BOX -->
+<div class="card" style="margin-top: 2rem; background: var(--bg-page); border: 1px solid var(--border-color);">
+    <div class="card-body">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.5rem;">
+            ℹ️ Academic Reservation Allocation Policy:
+        </h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+            When all physical copies of a book are currently issued, students can join the waiting queue.
+            As soon as an active loan is returned, the system's mutex-synchronized return logic checks for waiting students
+            and automatically reserves the returned physical copy for the student with queue position #1, granting a 48-hour pickup window.
+        </p>
+    </div>
+</div>
+{% endblock %}
