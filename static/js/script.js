@@ -493,3 +493,30 @@ function initConcurrencyMonitor() {
     }
 }
 
+// ==================== CODE EDITOR TAB SWITCHER & COPY HELPER ====================
+function switchCodeTab(tabId) {
+    document.querySelectorAll('.code-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+    document.querySelectorAll('.code-tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === tabId);
+    });
+}
+
+function copyActiveCode() {
+    const activePane = document.querySelector('.code-tab-pane.active .code-raw');
+    if (activePane) {
+        const text = activePane.value || activePane.textContent;
+        navigator.clipboard.writeText(text.trim()).then(() => {
+            const btn = document.getElementById('copyCodeBtn');
+            if (btn) {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span>✅ Copied to Clipboard!</span>';
+                setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+            }
+        }).catch(err => {
+            console.error('Copy failed:', err);
+        });
+    }
+}
+

@@ -1399,4 +1399,200 @@ input:checked + .slider:before {
     background-color: #F8FAFC;
 }
 
+/* ==================== CODE TABS & COPY BUTTON STYLES ==================== */
+
+.code-tab-btn {
+    background-color: transparent;
+    color: #8B949E;
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.code-tab-btn:hover {
+    color: #E6EDF3;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.code-tab-btn.active {
+    background-color: #0D1117;
+    color: #E6EDF3;
+    border-color: #30363D;
+    border-bottom: 2px solid #38BDF8;
+}
+
+.code-tab-pane {
+    display: none;
+    width: 100%;
+}
+
+.code-tab-pane.active {
+    display: flex;
+}
+
+.btn-copy-code {
+    background-color: #21262D;
+    color: #C9D1D9;
+    border: 1px solid #30363D;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: var(--transition);
+}
+
+.btn-copy-code:hover {
+    background-color: #30363D;
+    color: #FFFFFF;
+    border-color: #8B949E;
+}
+
+/* ==================== EXECUTION FLOW DIAGRAM STYLES ==================== */
+
+.execution-flow-container {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    color: #FFFFFF;
+    margin-top: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid #334155;
+}
+
+.execution-flow-header {
+    margin-bottom: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.execution-flow-steps {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 650px;
+    margin: 0 auto;
+}
+
+.flow-step-box {
+    width: 100%;
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.flow-step-box:hover {
+    border-color: #38BDF8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);
+}
+
+.flow-step-box.critical {
+    background-color: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.flow-step-box.highlight {
+    background-color: rgba(13, 148, 136, 0.15);
+    border-color: rgba(13, 148, 136, 0.5);
+}
+
+.flow-step-icon {
+    font-size: 1.25rem;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.flow-step-text {
+    flex: 1;
+}
+
+.flow-step-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #F8FAFC;
+    letter-spacing: -0.01em;
+}
+
+.flow-step-desc {
+    font-size: 0.78rem;
+    color: #94A3B8;
+    font-family: var(--font-mono);
+}
+
+.flow-arrow-indicator {
+    color: #38BDF8;
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1;
+    margin: -0.15rem 0;
+}
+
+/* ==================== CORE CONCEPTS SUMMARY CALLOUT ==================== */
+
+.core-summary-box {
+    background: #F8FAFC;
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--action-blue);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.core-summary-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--primary-navy);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.core-summary-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.75rem;
+}
+
+.core-summary-item {
+    background: #FFFFFF;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+}
+
+.core-summary-item strong {
+    color: var(--primary-navy);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+}
+
+
 
