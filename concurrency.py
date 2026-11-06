@@ -14,6 +14,40 @@ import library
 
 # Reuse the unified mutex from library.py to avoid duplicate mutexes
 concurrency_mutex = library.library_lock
+book_lock = concurrency_mutex
+
+def issue_book(student_name: str, book_id: str = "B100"):
+    """
+    Core Mutex-Protected Issue Operation:
+    Checks SQLite for an available copy, marks it ISSUED, and records the active transaction.
+    Guaranteed mutual exclusion using 'with book_lock:'.
+    """
+    with book_lock:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # 1. Check availability
+            cursor.execute(
+                "SELECT copy_id FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE' ORDER BY copy_id ASC LIMIT 1",
+                (book_id,)
+            )
+            available_copy = cursor.fetchone()
+            time.sleep(0.04)  # Processing latency inside critical section
+            
+            if available_copy:
+                copy_id = available_copy['copy_id']
+                cursor.execute("UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?", (copy_id,))
+                due_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute(
+                    "INSERT INTO transactions (student_id, copy_id, due_date, status) VALUES ((SELECT student_id FROM students LIMIT 1), ?, ?, 'ACTIVE')",
+                    (copy_id, due_date)
+                )
+                conn.commit()
+                return {"success": True, "copy_id": copy_id, "message": f"Book Issued: {copy_id}"}
+            else:
+                return {"success": False, "copy_id": None, "message": "Book Unavailable"}
+        finally:
+            conn.close()
 
 # Thread-safe event logging structures
 _event_log_lock = threading.Lock()

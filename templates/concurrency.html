@@ -256,11 +256,11 @@
     <div class="card" id="pythonImplementationSection" style="margin-bottom: 2rem;">
         <div class="card-header">
             <div>
-                <h3 style="font-size: 1.2rem; color: var(--primary-navy); display: flex; align-items: center; gap: 0.5rem;">
+                <h3 style="font-size: 1.25rem; color: var(--primary-navy); display: flex; align-items: center; gap: 0.5rem;">
                     <span>🐍</span> 4. Python Implementation – Threads & Mutex Lock
                 </h3>
-                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                    Actual backend implementation responsible for creating threads, mutual exclusion, critical section protection, and thread joining.
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                    Clean Python multithreading and Mutex Lock synchronization code demonstrating Critical Section protection (with mutex:) and Race Condition simulation.
                 </p>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -281,24 +281,17 @@
                             <span class="code-dot yellow"></span>
                             <span class="code-dot green"></span>
                         </div>
-                        <!-- TABS FOR ACTUAL BACKEND FILES -->
-                        <button type="button" class="code-tab-btn active" data-tab="tab-concurrency" onclick="switchCodeTab('tab-concurrency')">
-                            <span>📄</span> concurrency.py (Backend Thread Engine)
-                        </button>
-                        <button type="button" class="code-tab-btn" data-tab="tab-library" onclick="switchCodeTab('tab-library')">
-                            <span>📄</span> library.py (Mutex Protected Issue)
-                        </button>
-                        <button type="button" class="code-tab-btn" data-tab="tab-educational" onclick="switchCodeTab('tab-educational')">
-                            <span>🐍</span> Simplified Educational Script
-                        </button>
+                        <span style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: #58A6FF; margin-left: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>🐍</span> mutex_concurrency.py
+                        </span>
                     </div>
                     <div class="code-editor-actions">
-                        <span style="font-size: 0.75rem; color: #8B949E; font-family: var(--font-mono);">UTF-8 • Python</span>
+                        <span style="font-size: 0.75rem; color: #8B949E; font-family: var(--font-mono);">Python 3.14 • threading.Lock()</span>
                     </div>
                 </div>
 
-                <!-- TAB 1: ACTUAL BACKEND IMPLEMENTATION (concurrency.py) -->
-                <div class="code-tab-pane active" id="tab-concurrency">
+                <!-- SINGLE ACTIVE CODE PANE: USER'S CLEAN MUTEX CODE -->
+                <div class="code-tab-pane active" id="tab-demo">
                     <div class="code-editor-body" style="width: 100%;">
                         <div class="code-line-numbers">1
 2
@@ -353,499 +346,192 @@
 51
 52
 53
-54</div>
+54
+55</div>
                         <div class="code-lines-content"><span class="syn-kw">import</span> threading
 <span class="syn-kw">import</span> time
-<span class="syn-kw">from</span> database <span class="syn-kw">import</span> get_db_connection
-<span class="syn-kw">import</span> library
 
-<span class="syn-comment"># 1. Use the unified Mutex Lock primitive from library.py</span>
-<span class="syn-var">concurrency_mutex</span> <span class="syn-op">=</span> library.library_lock
+<span class="syn-var">available_copies</span> <span class="syn-op">=</span> <span class="syn-num">3</span>
 
-<span class="syn-kw">def</span> <span class="syn-func">_worker_thread_task</span>(thread_idx, student_id, student_name, book_id, use_mutex, start_barrier, results_dict):
-    <span class="syn-comment">"""Worker thread representing an individual student's concurrent request."""</span>
-    <span class="syn-comment"># Barrier: Synchronizes all student threads to start at the exact same millisecond</span>
-    start_barrier.<span class="syn-func">wait</span>()
+<span class="syn-comment"># Create Mutex Lock</span>
+<span class="syn-var">mutex</span> <span class="syn-op">=</span> threading.<span class="syn-class">Lock</span>()
 
-    conn <span class="syn-op">=</span> <span class="syn-func">get_db_connection</span>()
-    cursor <span class="syn-op">=</span> conn.<span class="syn-func">cursor</span>()
 
-    <span class="syn-kw">try</span>:
-        <span class="syn-kw">if</span> use_mutex:
-            <span class="syn-comment"># 2. Acquire Mutex Lock before entering Critical Section</span>
-            <span class="syn-var">concurrency_mutex</span>.<span class="syn-func">acquire</span>()
-            
-            <span class="syn-comment"># ==================== CRITICAL SECTION START ====================</span>
-            <span class="syn-comment"># 3. Check Book Availability in SQLite</span>
-            available_copy <span class="syn-op">=</span> cursor.<span class="syn-func">execute</span>(<span class="syn-str">"""
-                SELECT copy_id FROM book_copies 
-                WHERE book_id = ? AND status = 'AVAILABLE' 
-                ORDER BY copy_id ASC LIMIT 1
-            """</span>, (book_id,)).<span class="syn-func">fetchone</span>()
+<span class="syn-kw">def</span> <span class="syn-func">issue_book</span>(student_id, use_mutex):
+    <span class="syn-kw">global</span> <span class="syn-var">available_copies</span>
 
-            <span class="syn-comment"># Latency gap (simulates disk I/O and processing window)</span>
-            time.<span class="syn-func">sleep</span>(<span class="syn-num">0.04</span>)
+    <span class="syn-kw">if</span> use_mutex:
 
-            <span class="syn-comment"># 4. Issue Book or Reject cleanly</span>
-            <span class="syn-kw">if</span> available_copy:
-                copy_id <span class="syn-op">=</span> available_copy[<span class="syn-str">'copy_id'</span>]
-                cursor.<span class="syn-func">execute</span>(<span class="syn-str">"UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?"</span>, (copy_id,))
-                cursor.<span class="syn-func">execute</span>(<span class="syn-str">"""
-                    INSERT INTO transactions (student_id, copy_id, status)
-                    VALUES (?, ?, 'ACTIVE')
-                """</span>, (student_id, copy_id))
-                conn.<span class="syn-func">commit</span>()
-                results_dict[thread_idx] <span class="syn-op">=</span> {<span class="syn-str">"status"</span>: <span class="syn-str">"COMPLETED"</span>, <span class="syn-str">"copy_id"</span>: copy_id}
+        <span class="syn-comment"># Mutex ON</span>
+        <span class="syn-kw">with</span> <span class="syn-var">mutex</span>:
+
+            <span class="syn-kw">if</span> <span class="syn-var">available_copies</span> <span class="syn-op">&gt;</span> <span class="syn-num">0</span>:
+                <span class="syn-var">available_copies</span> <span class="syn-op">-=</span> <span class="syn-num">1</span>
+                <span class="syn-func">print</span>(<span class="syn-str">f"Student {student_id}: BOOK ISSUED"</span>)
+
             <span class="syn-kw">else</span>:
-                results_dict[thread_idx] <span class="syn-op">=</span> {<span class="syn-str">"status"</span>: <span class="syn-str">"FAILED"</span>, <span class="syn-str">"reason"</span>: <span class="syn-str">"Book Unavailable"</span>}
-            <span class="syn-comment"># ===================== CRITICAL SECTION END =====================</span>
+                <span class="syn-func">print</span>(<span class="syn-str">f"Student {student_id}: NO_COPY_AVAILABLE"</span>)
 
-            <span class="syn-comment"># 5. Release Mutex Lock for next waiting student thread</span>
-            <span class="syn-var">concurrency_mutex</span>.<span class="syn-func">release</span>()
+    <span class="syn-kw">else</span>:
 
-    <span class="syn-kw">finally</span>:
-        conn.<span class="syn-func">close</span>()
+        <span class="syn-comment"># Mutex OFF - Race Condition</span>
+        <span class="syn-kw">if</span> <span class="syn-var">available_copies</span> <span class="syn-op">&gt;</span> <span class="syn-num">0</span>:
 
-<span class="syn-kw">def</span> <span class="syn-func">run_controlled_concurrency_test</span>(num_threads<span class="syn-op">=</span><span class="syn-num">5</span>, initial_copies<span class="syn-op">=</span><span class="syn-num">1</span>, use_mutex<span class="syn-op">=</span><span class="syn-kw">True</span>, book_id<span class="syn-op">=</span><span class="syn-str">"B100"</span>):
-    <span class="syn-comment">"""Spawns 5 student threads, starts them concurrently, and joins them."""</span>
-    start_barrier <span class="syn-op">=</span> threading.<span class="syn-class">Barrier</span>(num_threads)
-    threads <span class="syn-op">=</span> []
-    results_dict <span class="syn-op">=</span> {}
+            time.<span class="syn-func">sleep</span>(<span class="syn-num">0.1</span>)
+            <span class="syn-var">available_copies</span> <span class="syn-op">-=</span> <span class="syn-num">1</span>
 
-    <span class="syn-comment"># 6. Create Student Threads using threading.Thread()</span>
-    <span class="syn-kw">for</span> idx <span class="syn-kw">in</span> <span class="syn-func">range</span>(<span class="syn-num">1</span>, num_threads <span class="syn-op">+</span> <span class="syn-num">1</span>):
-        t <span class="syn-op">=</span> threading.<span class="syn-class">Thread</span>(
-            target<span class="syn-op">=</span>_worker_thread_task,
-            args<span class="syn-op">=</span>(idx, idx, <span class="syn-str">f"Student {idx}"</span>, book_id, use_mutex, start_barrier, results_dict),
-            name<span class="syn-op">=</span><span class="syn-str">f"OS-Student-Thread-{idx}"</span>
-        )
-        threads.<span class="syn-func">append</span>(t)
+            <span class="syn-func">print</span>(<span class="syn-str">f"Student {student_id}: BOOK ISSUED"</span>)
 
-    <span class="syn-comment"># 7. Start all student threads simultaneously</span>
-    <span class="syn-kw">for</span> t <span class="syn-kw">in</span> threads:
-        t.<span class="syn-func">start</span>()
+        <span class="syn-kw">else</span>:
+            <span class="syn-func">print</span>(<span class="syn-str">f"Student {student_id}: NO_COPY_AVAILABLE"</span>)
 
-    <span class="syn-comment"># 8. Wait for all student threads to finish execution using join()</span>
-    <span class="syn-kw">for</span> t <span class="syn-kw">in</span> threads:
-        t.<span class="syn-func">join</span>()
 
-    <span class="syn-kw">return</span> results_dict</div>
+<span class="syn-comment"># Create and execute threads</span>
+<span class="syn-var">students</span> <span class="syn-op">=</span> []
+
+<span class="syn-kw">for</span> i <span class="syn-kw">in</span> <span class="syn-func">range</span>(<span class="syn-num">10</span>):
+    t <span class="syn-op">=</span> threading.<span class="syn-class">Thread</span>(
+        target<span class="syn-op">=</span>issue_book,
+        args<span class="syn-op">=</span>(i <span class="syn-op">+</span> <span class="syn-num">1</span>, <span class="syn-kw">True</span>)
+    )
+    students.<span class="syn-func">append</span>(t)
+
+<span class="syn-comment"># Start threads</span>
+<span class="syn-kw">for</span> t <span class="syn-kw">in</span> students:
+    t.<span class="syn-func">start</span>()
+
+<span class="syn-comment"># Wait for completion</span>
+<span class="syn-kw">for</span> t <span class="syn-kw">in</span> students:
+    t.<span class="syn-func">join</span>()</div>
                     </div>
                     <!-- Hidden Raw Code for 1-Click Clipboard Copy -->
                     <textarea class="code-raw" style="display: none;">import threading
 import time
-from database import get_db_connection
-import library
 
-# 1. Use the unified Mutex Lock primitive from library.py
-concurrency_mutex = library.library_lock
+available_copies = 3
 
-def _worker_thread_task(thread_idx, student_id, student_name, book_id, use_mutex, start_barrier, results_dict):
-    """Worker thread representing an individual student's concurrent request."""
-    # Barrier: Synchronizes all student threads to start at the exact same millisecond
-    start_barrier.wait()
+# Create Mutex Lock
+mutex = threading.Lock()
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
 
-    try:
-        if use_mutex:
-            # 2. Acquire Mutex Lock before entering Critical Section
-            concurrency_mutex.acquire()
-            
-            # ==================== CRITICAL SECTION START ====================
-            # 3. Check Book Availability in SQLite
-            available_copy = cursor.execute("""
-                SELECT copy_id FROM book_copies 
-                WHERE book_id = ? AND status = 'AVAILABLE' 
-                ORDER BY copy_id ASC LIMIT 1
-            """, (book_id,)).fetchone()
+def issue_book(student_id, use_mutex):
+    global available_copies
 
-            # Latency gap (simulates disk I/O and processing window)
-            time.sleep(0.04)
+    if use_mutex:
 
-            # 4. Issue Book or Reject cleanly
-            if available_copy:
-                copy_id = available_copy['copy_id']
-                cursor.execute("UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?", (copy_id,))
-                cursor.execute("""
-                    INSERT INTO transactions (student_id, copy_id, status)
-                    VALUES (?, ?, 'ACTIVE')
-                """, (student_id, copy_id))
-                conn.commit()
-                results_dict[thread_idx] = {"status": "COMPLETED", "copy_id": copy_id}
+        # Mutex ON
+        with mutex:
+
+            if available_copies > 0:
+                available_copies -= 1
+                print(f"Student {student_id}: BOOK ISSUED")
+
             else:
-                results_dict[thread_idx] = {"status": "FAILED", "reason": "Book Unavailable"}
-            # ===================== CRITICAL SECTION END =====================
+                print(f"Student {student_id}: NO_COPY_AVAILABLE")
 
-            # 5. Release Mutex Lock for next waiting student thread
-            concurrency_mutex.release()
-
-    finally:
-        conn.close()
-
-def run_controlled_concurrency_test(num_threads=5, initial_copies=1, use_mutex=True, book_id="B100"):
-    """Spawns 5 student threads, starts them concurrently, and joins them."""
-    start_barrier = threading.Barrier(num_threads)
-    threads = []
-    results_dict = {}
-
-    # 6. Create Student Threads using threading.Thread()
-    for idx in range(1, num_threads + 1):
-        t = threading.Thread(
-            target=_worker_thread_task,
-            args=(idx, idx, f"Student {idx}", book_id, use_mutex, start_barrier, results_dict),
-            name=f"OS-Student-Thread-{idx}"
-        )
-        threads.append(t)
-
-    # 7. Start all student threads simultaneously
-    for t in threads:
-        t.start()
-
-    # 8. Wait for all student threads to finish execution using join()
-    for t in threads:
-        t.join()
-
-    return results_dict</textarea>
-                </div>
-
-                <!-- TAB 2: BACKEND MUTEX ISSUE OPERATION (library.py) -->
-                <div class="code-tab-pane" id="tab-library">
-                    <div class="code-editor-body" style="width: 100%;">
-                        <div class="code-line-numbers">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45</div>
-                        <div class="code-lines-content"><span class="syn-kw">import</span> threading
-<span class="syn-kw">from</span> database <span class="syn-kw">import</span> get_db_connection
-
-<span class="syn-comment"># Shared Mutex Lock Primitive protecting book issues & returns</span>
-<span class="syn-var">library_lock</span> <span class="syn-op">=</span> threading.<span class="syn-class">Lock</span>()
-
-<span class="syn-kw">def</span> <span class="syn-func">issue_book</span>(book_id: <span class="syn-class">str</span>, student_id: <span class="syn-class">int</span>, use_lock: <span class="syn-class">bool</span> <span class="syn-op">=</span> <span class="syn-kw">True</span>):
-    <span class="syn-comment">"""Issues a physical book copy using Python Mutex Synchronization."""</span>
-    <span class="syn-kw">if</span> use_lock:
-        <span class="syn-comment"># Context-manager automatically acquires and releases the mutex</span>
-        <span class="syn-kw">with</span> <span class="syn-var">library_lock</span>:
-            <span class="syn-kw">return</span> <span class="syn-func">_execute_issue</span>(book_id, student_id)
-    <span class="syn-kw">else</span>:
-        <span class="syn-comment"># Unsafe execution path for demonstrating race conditions</span>
-        <span class="syn-kw">return</span> <span class="syn-func">_execute_issue</span>(book_id, student_id)
-
-<span class="syn-kw">def</span> <span class="syn-func">_execute_issue</span>(book_id: <span class="syn-class">str</span>, student_id: <span class="syn-class">int</span>):
-    conn <span class="syn-op">=</span> <span class="syn-func">get_db_connection</span>()
-    cursor <span class="syn-op">=</span> conn.<span class="syn-func">cursor</span>()
-
-    <span class="syn-kw">try</span>:
-        <span class="syn-comment"># ==================== CRITICAL SECTION START ====================</span>
-        <span class="syn-comment"># 1. Query SQLite for first AVAILABLE physical copy</span>
-        available_copy <span class="syn-op">=</span> cursor.<span class="syn-func">execute</span>(<span class="syn-str">"""
-            SELECT copy_id FROM book_copies 
-            WHERE book_id = ? AND status = 'AVAILABLE' 
-            ORDER BY copy_id ASC LIMIT 1
-        """</span>, (book_id,)).<span class="syn-func">fetchone</span>()
-
-        <span class="syn-kw">if</span> <span class="syn-kw">not</span> available_copy:
-            conn.<span class="syn-func">close</span>()
-            <span class="syn-kw">return</span> {<span class="syn-str">"success"</span>: <span class="syn-kw">False</span>, <span class="syn-str">"message"</span>: <span class="syn-str">"Book Unavailable. All copies currently issued."</span>}
-
-        copy_id <span class="syn-op">=</span> available_copy[<span class="syn-str">'copy_id'</span>]
-
-        <span class="syn-comment"># 2. Update physical copy status to ISSUED</span>
-        cursor.<span class="syn-func">execute</span>(<span class="syn-str">"UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?"</span>, (copy_id,))
-
-        <span class="syn-comment"># 3. Insert active loan transaction with 14-day due date</span>
-        cursor.<span class="syn-func">execute</span>(<span class="syn-str">"""
-            INSERT INTO transactions (student_id, copy_id, status)
-            VALUES (?, ?, 'ACTIVE')
-        """</span>, (student_id, copy_id))
-
-        <span class="syn-comment"># 4. Commit database transaction (Atomicity)</span>
-        conn.<span class="syn-func">commit</span>()
-        conn.<span class="syn-func">close</span>()
-        <span class="syn-comment"># ===================== CRITICAL SECTION END =====================</span>
-
-        <span class="syn-kw">return</span> {<span class="syn-str">"success"</span>: <span class="syn-kw">True</span>, <span class="syn-str">"copy_id"</span>: copy_id, <span class="syn-str">"message"</span>: <span class="syn-str">f"Issued copy {copy_id} successfully."</span>}
-
-    <span class="syn-kw">except</span> Exception <span class="syn-kw">as</span> e:
-        conn.<span class="syn-func">rollback</span>()
-        conn.<span class="syn-func">close</span>()
-        <span class="syn-kw">return</span> {<span class="syn-str">"success"</span>: <span class="syn-kw">False</span>, <span class="syn-str">"message"</span>: <span class="syn-func">str</span>(e)}</div>
-                    </div>
-                    <!-- Hidden Raw Code -->
-                    <textarea class="code-raw" style="display: none;">import threading
-from database import get_db_connection
-
-# Shared Mutex Lock Primitive protecting book issues & returns
-library_lock = threading.Lock()
-
-def issue_book(book_id: str, student_id: int, use_lock: bool = True):
-    """Issues a physical book copy using Python Mutex Synchronization."""
-    if use_lock:
-        # Context-manager automatically acquires and releases the mutex
-        with library_lock:
-            return _execute_issue(book_id, student_id)
     else:
-        # Unsafe execution path for demonstrating race conditions
-        return _execute_issue(book_id, student_id)
 
-def _execute_issue(book_id: str, student_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+        # Mutex OFF - Race Condition
+        if available_copies > 0:
 
-    try:
-        # ==================== CRITICAL SECTION START ====================
-        # 1. Query SQLite for first AVAILABLE physical copy
-        available_copy = cursor.execute("""
-            SELECT copy_id FROM book_copies 
-            WHERE book_id = ? AND status = 'AVAILABLE' 
-            ORDER BY copy_id ASC LIMIT 1
-        """, (book_id,)).fetchone()
+            time.sleep(0.1)
+            available_copies -= 1
 
-        if not available_copy:
-            conn.close()
-            return {"success": False, "message": "Book Unavailable. All copies currently issued."}
+            print(f"Student {student_id}: BOOK ISSUED")
 
-        copy_id = available_copy['copy_id']
-
-        # 2. Update physical copy status to ISSUED
-        cursor.execute("UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?", (copy_id,))
-
-        # 3. Insert active loan transaction with 14-day due date
-        cursor.execute("""
-            INSERT INTO transactions (student_id, copy_id, status)
-            VALUES (?, ?, 'ACTIVE')
-        """, (student_id, copy_id))
-
-        # 4. Commit database transaction (Atomicity)
-        conn.commit()
-        conn.close()
-        # ===================== CRITICAL SECTION END =====================
-
-        return {"success": True, "copy_id": copy_id, "message": f"Issued copy {copy_id} successfully."}
-
-    except Exception as e:
-        conn.rollback()
-        conn.close()
-        return {"success": False, "message": str(e)}</textarea>
-                </div>
-
-                <!-- TAB 3: SIMPLIFIED EDUCATIONAL SCRIPT -->
-                <div class="code-tab-pane" id="tab-educational">
-                    <div class="code-editor-body" style="width: 100%;">
-                        <div class="code-line-numbers">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50</div>
-                        <div class="code-lines-content"><span class="syn-kw">import</span> threading
-<span class="syn-kw">import</span> time
-<span class="syn-kw">import</span> sqlite3
-
-<span class="syn-comment"># 1. Initialize Mutex Lock Primitive</span>
-<span class="syn-var">book_lock</span> <span class="syn-op">=</span> threading.<span class="syn-class">Lock</span>()
-
-<span class="syn-kw">def</span> <span class="syn-func">issue_book</span>(student_name, book_id):
-    <span class="syn-func">print</span>(<span class="syn-str">f"[{student_name}] Request received. Waiting for Mutex Lock..."</span>)
-    
-    <span class="syn-comment"># 2. Acquire Mutex Lock (Entering Critical Section)</span>
-    <span class="syn-kw">with</span> <span class="syn-var">book_lock</span>:
-        <span class="syn-func">print</span>(<span class="syn-str">f"[{student_name}] Mutex Acquired! Entered Critical Section."</span>)
-        
-        <span class="syn-comment"># Connect to SQLite Database</span>
-        conn <span class="syn-op">=</span> sqlite3.<span class="syn-func">connect</span>(<span class="syn-str">"library.db"</span>)
-        cursor <span class="syn-op">=</span> conn.<span class="syn-func">cursor</span>()
-        
-        <span class="syn-comment"># 3. Check Book Availability</span>
-        cursor.<span class="syn-func">execute</span>(
-            <span class="syn-str">"SELECT copy_id FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE' LIMIT 1"</span>,
-            (book_id,)
-        )
-        copy <span class="syn-op">=</span> cursor.<span class="syn-func">fetchone</span>()
-        time.<span class="syn-func">sleep</span>(<span class="syn-num">0.5</span>)  <span class="syn-comment"># Simulate processing latency</span>
-        
-        <span class="syn-comment"># 4. Issue Book or Reject cleanly</span>
-        <span class="syn-kw">if</span> copy:
-            copy_id <span class="syn-op">=</span> copy[<span class="syn-num">0</span>]
-            cursor.<span class="syn-func">execute</span>(<span class="syn-str">"UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?"</span>, (copy_id,))
-            cursor.<span class="syn-func">execute</span>(
-                <span class="syn-str">"INSERT INTO transactions (copy_id, student, status) VALUES (?, ?, 'ACTIVE')"</span>,
-                (copy_id, student_name)
-            )
-            conn.<span class="syn-func">commit</span>()
-            <span class="syn-func">print</span>(<span class="syn-str">f"[{student_name}] SUCCESS: Issued physical copy {copy_id}!"</span>)
-        <span class="syn-kw">else</span>:
-            <span class="syn-func">print</span>(<span class="syn-str">f"[{student_name}] FAILED: Book Unavailable."</span>)
-            
-        conn.<span class="syn-func">close</span>()
-        <span class="syn-func">print</span>(<span class="syn-str">f"[{student_name}] Releasing Mutex Lock and exiting Critical Section."</span>)
-    <span class="syn-comment"># Mutex lock is automatically released here</span>
-
-<span class="syn-comment"># 5. Create 5 concurrent student threads</span>
-students <span class="syn-op">=</span> [<span class="syn-str">"Student 1"</span>, <span class="syn-str">"Student 2"</span>, <span class="syn-str">"Student 3"</span>, <span class="syn-str">"Student 4"</span>, <span class="syn-str">"Student 5"</span>]
-threads <span class="syn-op">=</span> []
-
-<span class="syn-kw">for</span> student <span class="syn-kw">in</span> students:
-    t <span class="syn-op">=</span> threading.<span class="syn-class">Thread</span>(target<span class="syn-op">=</span>issue_book, args<span class="syn-op">=</span>(student, <span class="syn-str">"B100"</span>))
-    threads.<span class="syn-func">append</span>(t)
-    t.<span class="syn-func">start</span>()  <span class="syn-comment"># Start thread</span>
-
-<span class="syn-comment"># 6. Wait for all 5 student threads to complete</span>
-<span class="syn-kw">for</span> t <span class="syn-kw">in</span> threads:
-    t.<span class="syn-func">join</span>()  <span class="syn-comment"># Wait for thread to finish</span>
-
-<span class="syn-func">print</span>(<span class="syn-str">"All threads finished. Exactly 1 copy was issued safely."</span>)</div>
-                    </div>
-                    <!-- Hidden Raw Code -->
-                    <textarea class="code-raw" style="display: none;">import threading
-import time
-import sqlite3
-
-# 1. Initialize Mutex Lock Primitive
-book_lock = threading.Lock()
-
-def issue_book(student_name, book_id):
-    print(f"[{student_name}] Request received. Waiting for Mutex Lock...")
-    
-    # 2. Acquire Mutex Lock (Entering Critical Section)
-    with book_lock:
-        print(f"[{student_name}] Mutex Acquired! Entered Critical Section.")
-        
-        # Connect to SQLite Database
-        conn = sqlite3.connect("library.db")
-        cursor = conn.cursor()
-        
-        # 3. Check Book Availability
-        cursor.execute(
-            "SELECT copy_id FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE' LIMIT 1",
-            (book_id,)
-        )
-        copy = cursor.fetchone()
-        time.sleep(0.5)  # Simulate processing latency
-        
-        # 4. Issue Book or Reject cleanly
-        if copy:
-            copy_id = copy[0]
-            cursor.execute("UPDATE book_copies SET status = 'ISSUED' WHERE copy_id = ?", (copy_id,))
-            cursor.execute(
-                "INSERT INTO transactions (copy_id, student, status) VALUES (?, ?, 'ACTIVE')",
-                (copy_id, student_name)
-            )
-            conn.commit()
-            print(f"[{student_name}] SUCCESS: Issued physical copy {copy_id}!")
         else:
-            print(f"[{student_name}] FAILED: Book Unavailable.")
-            
-        conn.close()
-        print(f"[{student_name}] Releasing Mutex Lock and exiting Critical Section.")
-    # Mutex lock is automatically released here
+            print(f"Student {student_id}: NO_COPY_AVAILABLE")
 
-# 5. Create 5 concurrent student threads
-students = ["Student 1", "Student 2", "Student 3", "Student 4", "Student 5"]
-threads = []
 
-for student in students:
-    t = threading.Thread(target=issue_book, args=(student, "B100"))
-    threads.append(t)
-    t.start()  # Start thread
+# Create and execute threads
+students = []
 
-# 6. Wait for all 5 student threads to complete
-for t in threads:
-    t.join()  # Wait for thread to finish
+for i in range(10):
+    t = threading.Thread(
+        target=issue_book,
+        args=(i + 1, True)
+    )
+    students.append(t)
 
-print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
+# Start threads
+for t in students:
+    t.start()
+
+# Wait for completion
+for t in students:
+    t.join()</textarea>
                 </div>
             </div>
 
-            <!-- 3. SIMPLE CORE EXPLANATIONS BELOW THE CODE (REQUIREMENT 3) -->
-            <div class="core-summary-box">
+            <!-- EXPLANATION OF EACH IMPORTANT STATEMENT IN SIMPLE ENGLISH -->
+            <div style="padding: 1.5rem 1.5rem 0.5rem 1.5rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--primary-navy); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📝</span> Explanation of Key Python Statements
+                </h4>
+                <div class="table-responsive">
+                    <table class="line-breakdown-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 250px;">Statement Construct</th>
+                                <th>Plain English Explanation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>import threading</code></td>
+                                <td>Imports Python's standard multithreading library, allowing the application to create and coordinate concurrent student threads.</td>
+                            </tr>
+                            <tr>
+                                <td><code>available_copies = 3</code></td>
+                                <td><strong>Shared Global Resource:</strong> Represents the shared counter of physical book copies available in the library.</td>
+                            </tr>
+                            <tr>
+                                <td><code>mutex = threading.Lock()</code></td>
+                                <td><strong>Creates Mutex Lock:</strong> Instantiates a mutual exclusion lock primitive to protect the shared critical section from simultaneous access.</td>
+                            </tr>
+                            <tr>
+                                <td><code>def issue_book(student_id, use_mutex):</code></td>
+                                <td>Defines the thread worker function executed concurrently by each student thread requesting to issue a book.</td>
+                            </tr>
+                            <tr>
+                                <td><code>global available_copies</code></td>
+                                <td>Declares that the function modifies the shared global variable <code>available_copies</code> rather than creating a local variable.</td>
+                            </tr>
+                            <tr>
+                                <td><code>with mutex:</code></td>
+                                <td><strong>Mutex ON (Critical Section):</strong> Automatically acquires the lock before entering. Only 1 thread enters at a time; others wait. Automatically releases the lock on exit.</td>
+                            </tr>
+                            <tr>
+                                <td><code>if available_copies > 0: ... -= 1</code></td>
+                                <td><strong>Availability Check & Issue:</strong> Safely inspects and decrements the copy counter atomically under mutex protection.</td>
+                            </tr>
+                            <tr>
+                                <td><code>time.sleep(0.1)</code> (Mutex OFF)</td>
+                                <td><strong>Race Condition Demonstration:</strong> Without mutex, introduces a delay allowing multiple threads to observe available copies at the same time, causing over-allocation.</td>
+                            </tr>
+                            <tr>
+                                <td><code>students = []</code></td>
+                                <td>List data structure that stores all spawned <code>Thread</code> objects for centralized tracking.</td>
+                            </tr>
+                            <tr>
+                                <td><code>threading.Thread(target=issue_book, args=(i + 1, True))</code></td>
+                                <td>Creates an individual thread assigned to execute <code>issue_book</code> for that student with Mutex enabled.</td>
+                            </tr>
+                            <tr>
+                                <td><code>t.start()</code></td>
+                                <td>Starts concurrent execution of the student thread in the operating system scheduler.</td>
+                            </tr>
+                            <tr>
+                                <td><code>t.join()</code></td>
+                                <td>Halts the main coordinator until that specific student thread completes execution, ensuring all 10 students finish cleanly.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CORE CONCEPTS SUMMARY CALLOUT -->
+            <div class="core-summary-box" style="margin: 1.5rem;">
                 <div class="core-summary-title">
                     <span>💡</span> Core Concurrency Concepts in This Implementation
                 </div>
@@ -857,10 +543,10 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                         <strong>threading.Lock()</strong> — Creates a mutual exclusion (mutex) lock primitive to coordinate shared resource access.
                     </div>
                     <div class="core-summary-item">
-                        <strong>with book_lock</strong> — Context manager that allows only one thread into the protected critical section at a time, releasing the lock automatically upon exit.
+                        <strong>with mutex</strong> — Context manager that allows only one thread into the protected critical section at a time, releasing the lock automatically upon exit.
                     </div>
                     <div class="core-summary-item">
-                        <strong>Critical Section</strong> — The protected code section where book availability is checked and updated in the SQLite database.
+                        <strong>Critical Section</strong> — The protected code section where book availability is checked and decremented.
                     </div>
                     <div class="core-summary-item">
                         <strong>join()</strong> — Halts the main coordinator thread and waits for all spawned student threads to finish execution cleanly.
@@ -868,8 +554,8 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                 </div>
             </div>
 
-            <!-- 4. SIMPLE EXECUTION FLOW (REQUIREMENT 4) -->
-            <div class="execution-flow-container">
+            <!-- SIMPLE EXECUTION FLOW (REQUIREMENT 4) -->
+            <div class="execution-flow-container" style="margin: 1.5rem;">
                 <div class="execution-flow-header">
                     <h4 style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
                         <span>🔄</span> Simple Concurrency Execution Flow
@@ -893,7 +579,7 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                         <div class="flow-step-icon">🧵</div>
                         <div class="flow-step-text">
                             <div class="flow-step-title">Thread Created</div>
-                            <div class="flow-step-desc"><code>threading.Thread(target=_worker_thread_task)</code> is spawned for the student.</div>
+                            <div class="flow-step-desc"><code>threading.Thread(target=issue_book, args=(student,))</code> is spawned for the student.</div>
                         </div>
                     </div>
                     <div class="flow-arrow-indicator">↓</div>
@@ -913,7 +599,7 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                         <div class="flow-step-icon">🔒</div>
                         <div class="flow-step-text">
                             <div class="flow-step-title">Mutex Acquired</div>
-                            <div class="flow-step-desc"><code>concurrency_mutex.acquire()</code> succeeds. Mutual exclusion is active.</div>
+                            <div class="flow-step-desc"><code>with book_lock:</code> lock acquisition succeeds. Mutual exclusion is active.</div>
                         </div>
                     </div>
                     <div class="flow-arrow-indicator">↓</div>
@@ -953,7 +639,7 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                         <div class="flow-step-icon">🔓</div>
                         <div class="flow-step-text">
                             <div class="flow-step-title">Release Mutex</div>
-                            <div class="flow-step-desc"><code>concurrency_mutex.release()</code> wakes up the next queued waiting thread.</div>
+                            <div class="flow-step-desc">Exiting <code>with book_lock:</code> automatically frees lock for next waiting student.</div>
                         </div>
                     </div>
                     <div class="flow-arrow-indicator">↓</div>
@@ -966,96 +652,6 @@ print("All threads finished. Exactly 1 copy was issued safely.")</textarea>
                             <div class="flow-step-desc"><code>t.join()</code> synchronizes completion back to the main coordination runner.</div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- DETAILED LINE-BY-LINE BREAKDOWN TABLE -->
-            <div style="padding: 1.5rem;">
-                <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.75rem;">
-                    Line-by-Line Code Breakdown
-                </h4>
-                <div class="table-responsive">
-                    <table class="line-breakdown-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 130px;">Lines</th>
-                                <th style="width: 240px;">Code Construct</th>
-                                <th>Purpose & Detailed Explanation</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>Lines 1–4</code></td>
-                                <td><code>import threading, time, sqlite3</code></td>
-                                <td>Imports Python's standard multithreading library, time utilities for simulated I/O latency, and the SQLite database driver.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 7</code></td>
-                                <td><code>concurrency_mutex = library.library_lock</code></td>
-                                <td>Reuses the application's unified mutual exclusion (mutex) lock object shared across both the web server and the concurrency runner.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 9</code></td>
-                                <td><code>def _worker_thread_task(...)</code></td>
-                                <td>Defines the thread worker function representing a single student's attempt to issue a book.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 12</code></td>
-                                <td><code>start_barrier.wait()</code></td>
-                                <td>Barrier synchronization ensuring that all 5 student threads arrive and begin competing simultaneously.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 20</code></td>
-                                <td><code>concurrency_mutex.acquire()</code></td>
-                                <td><strong>Critical Section Entrance:</strong> Thread attempts to acquire the lock. Only 1 thread enters; others pause in the OS wait queue.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 24–28</code></td>
-                                <td><code>SELECT copy_id ... AVAILABLE</code></td>
-                                <td>Queries SQLite to check if a physical copy is currently available. Protected by the mutex to avoid duplicate reads.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 31</code></td>
-                                <td><code>time.sleep(0.04)</code></td>
-                                <td>Simulates disk I/O and server processing time inside the critical section.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 34–41</code></td>
-                                <td><code>UPDATE ... status = 'ISSUED'</code></td>
-                                <td>If a copy is found, its status is changed to <code>ISSUED</code> and an active loan record is inserted. <code>conn.commit()</code> ensures atomicity.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 43</code></td>
-                                <td><code>else: Book Unavailable</code></td>
-                                <td>If 0 copies are available, the student's request is cleanly rejected with "Book Unavailable".</td>
-                            </tr>
-                            <tr>
-                                <td><code>Line 48</code></td>
-                                <td><code>concurrency_mutex.release()</code></td>
-                                <td><strong>Critical Section Exit:</strong> Unlocks the mutex, signaling the next waiting student thread to enter.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 53–58</code></td>
-                                <td><code>run_controlled_concurrency_test()</code></td>
-                                <td>Main coordinator function setting up barrier, data structures, and thread pool.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 60–66</code></td>
-                                <td><code>threading.Thread(...)</code></td>
-                                <td>Creates 5 separate threads targeting <code>_worker_thread_task</code> with individual student arguments.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 69–70</code></td>
-                                <td><code>t.start()</code></td>
-                                <td>Begins execution of all 5 student threads simultaneously.</td>
-                            </tr>
-                            <tr>
-                                <td><code>Lines 73–74</code></td>
-                                <td><code>t.join()</code></td>
-                                <td>Waits for all 5 student threads to complete their operations before returning final results.</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
